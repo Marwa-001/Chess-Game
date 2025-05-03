@@ -1,0 +1,29 @@
+#include "../../include/rook.h"
+#include "../../include/chess_board.h"
+
+Rook::Rook(Color c) : Pieces(c) {}
+
+bool Rook::isValidMove(int fromX, int fromY, int toX, int toY, const ChessBoard& board) const {
+    // 1. Must move straight
+    if (fromX != toX && fromY != toY) return false;
+
+    // 2. Check path is clear
+    int stepX = (toX == fromX) ? 0 : (toX > fromX) ? 1 : -1;
+    int stepY = (toY == fromY) ? 0 : (toY > fromY) ? 1 : -1;
+
+    int x = fromX + stepX;
+    int y = fromY + stepY;
+    while (x != toX || y != toY) {
+        if (!board.isEmpty(x, y)) return false;
+        x += stepX;
+        y += stepY;
+    }
+
+    // 3. Validate destination
+    return board.isEmpty(toX, toY) || 
+           (board.getPiece(toX, toY)->getColor() != color);
+}
+
+char Rook::getSymbol() const {
+    return (color == Color::White) ? 'R' : 'r';
+}
