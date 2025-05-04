@@ -7,6 +7,6 @@ public:
     bool isValidMove(int fromX, int fromY, int toX, int toY, const class ChessBoard& board) const override;
     char getSymbol() const override;
     PieceType getType() const override {
-        return PieceType::Pawn; // Or however you're defining piece types
+        return PieceType::PAWN; // Or however you're defining piece types
     }
 };

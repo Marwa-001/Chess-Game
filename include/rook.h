@@ -9,5 +9,5 @@ public:
     
     // Special for castling
     bool hasMoved = false; // Track if rook moved (for castling)  --> TODO: CATSLING
-    PieceType getType() const override { return PieceType::Rook; }
+    PieceType getType() const override { return PieceType::ROOK; }
 };

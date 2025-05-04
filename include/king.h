@@ -8,6 +8,6 @@ public:
     char getSymbol() const override;
     bool hasMoved = false; // For castling
     PieceType getType() const override {
-        return PieceType::King; // Or however you're defining piece types
+        return PieceType::KING; // Or however you're defining piece types
     }
 };

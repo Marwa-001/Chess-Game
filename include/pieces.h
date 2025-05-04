@@ -2,7 +2,7 @@
 
 enum class Color { White, Black };
 enum class PieceType {
-    King, Queen, Rook, Bishop, Knight, Pawn
+    KING, QUEEN, ROOK, BISHOP, KNIGHT, PAWN
 };
 
 class Pieces {
