@@ -49,6 +49,12 @@ int main()
     {
         board.display();
     
+    // Check for stalemate first
+    if (board.isStalemate(currentTurn)) {
+        std::cout << "\nSTALEMATE! Game ends in a draw.\n";
+        break;
+    }
+    
         // Check for checkmate first
         if (board.isCheckmate(currentTurn)) {
             cout << "\nCHECKMATE! " 

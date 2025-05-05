@@ -106,42 +106,46 @@ void ChessBoard::initializeBoard()
                                                          // TODO: Initialize other pieces
 }
 
-bool ChessBoard::movePiece(int fromX, int fromY, int toX, int toY) {
-    if (!isMoveValid(fromX, fromY, toX, toY, currentTurn)) {
-        if (isKingInCheck(currentTurn) && !hasAnyLegalMove(currentTurn)) {
+bool ChessBoard::movePiece(int fromX, int fromY, int toX, int toY)
+{
+    if (!isMoveValid(fromX, fromY, toX, toY, currentTurn))
+    {
+        if (isKingInCheck(currentTurn) && !hasAnyLegalMove(currentTurn))
+        {
             checkmate = true;
         }
         return false;
     }
 
     // Capture announcement
-    if (board[toX][toY]) {
-        std::cout << board[fromX][fromY]->getSymbol() 
-                 << " captures " 
-                 << board[toX][toY]->getSymbol()
-                 << " at " << char('a'+toY) << 8-toX << "!\n";
+    if (board[toX][toY])
+    {
+        std::cout << board[fromX][fromY]->getSymbol()
+                  << " captures "
+                  << board[toX][toY]->getSymbol()
+                  << " at " << char('a' + toY) << 8 - toX << "!\n";
     }
 
     // Execute the move - IMPORTANT FIX HERE
-    auto movingPiece = std::move(board[fromX][fromY]);  // Store the moving piece first
-    board[toX][toY] = std::move(movingPiece);           // Then place it at destination
+    auto movingPiece = std::move(board[fromX][fromY]); // Store the moving piece first
+    board[toX][toY] = std::move(movingPiece);          // Then place it at destination
 
     // Check game state
     Color opponent = (currentTurn == Color::White) ? Color::Black : Color::White;
-    if (isCheckmate(opponent)) {
+    if (isCheckmate(opponent))
+    {
         std::cout << "CHECKMATE! "
-                 << (currentTurn == Color::White ? "White" : "Black")
-                 << " wins!\n";
+                  << (currentTurn == Color::White ? "White" : "Black")
+                  << " wins!\n";
         gameOver = true;
-        checkmate=true;
+        checkmate = true;
     }
-    else if (isKingInCheck(opponent)) {
+    else if (isKingInCheck(opponent))
+    {
         std::cout << "CHECK!\n";
     }
-        currentTurn = opponent;
-
+    currentTurn = opponent;
     
-
     return true;
 }
 
@@ -409,6 +413,20 @@ bool ChessBoard::hasAnyLegalMove(Color color)
         }
     }
     return false;
+}
+
+bool ChessBoard::isStalemate(Color color){
+    // 1. King must NOT be in check
+    if (isKingInCheck(color)) {
+        return false;
+    }
+
+    // 2. No legal moves for any piece
+    if (hasAnyLegalMove(color)) {
+        return false;
+    }
+
+    return true;
 }
 
 void ChessBoard::display() const

@@ -31,4 +31,5 @@ public:
     std::vector<Position> getAttackPath(Position attacker, Position king);
     bool hasAnyLegalMove(Color color);
     bool isCheckmate(Color color);
+    bool isStalemate(Color color);
 };
