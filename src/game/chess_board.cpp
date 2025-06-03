@@ -6,6 +6,7 @@
 #include "../../include/queen.h"
 #include <iostream>
 #include <vector>
+#include <limits>
 
 ChessBoard::ChessBoard() : currentTurn(Color::White)
 {
@@ -117,8 +118,30 @@ bool ChessBoard::movePiece(int fromX, int fromY, int toX, int toY)
         return false;
     }
 
-    // Capture announcement
-    if (board[toX][toY])
+    // Handle castling first
+
+    Color opponent = (currentTurn == Color::White) ? Color::Black : Color::White;
+    // Handle castling
+    if (board[fromX][fromY]->getType() == PieceType::KING && abs(fromY - toY) == 2)
+    {
+        int rookFromY = (toY > fromY) ? 7 : 0;
+        int rookToY = (toY > fromY) ? toY - 1 : toY + 1;
+
+        // First move the king
+        board[toX][toY] = std::move(board[fromX][fromY]);
+        board[toX][toY]->setHasMoved(true);
+
+        // Then move the rook
+        board[fromX][rookToY] = std::move(board[fromX][rookFromY]);
+        board[fromX][rookToY]->setHasMoved(true);
+
+        std::cout << (toY > fromY ? "Kingside" : "Queenside") << " castling!\n";
+        currentTurn = opponent;
+        return true;
+    }
+
+    // Announce capture (except for castling)
+    if (board[toX][toY] && abs(fromY - toY) != 2)
     {
         std::cout << board[fromX][fromY]->getSymbol()
                   << " captures "
@@ -126,12 +149,18 @@ bool ChessBoard::movePiece(int fromX, int fromY, int toX, int toY)
                   << " at " << char('a' + toY) << 8 - toX << "!\n";
     }
 
-    // Execute the move - IMPORTANT FIX HERE
-    auto movingPiece = std::move(board[fromX][fromY]); // Store the moving piece first
-    board[toX][toY] = std::move(movingPiece);          // Then place it at destination
+    // Execute the move
+    auto movingPiece = std::move(board[fromX][fromY]);
+    board[toX][toY] = std::move(movingPiece);
+    board[toX][toY]->setHasMoved(true);
+
+    // Handle pawn promotion
+    if (board[toX][toY]->getType() == PieceType::PAWN && (toX == 0 || toX == 7))
+    {
+        promotePawn(toX, toY);
+    }
 
     // Check game state
-    Color opponent = (currentTurn == Color::White) ? Color::Black : Color::White;
     if (isCheckmate(opponent))
     {
         std::cout << "CHECKMATE! "
@@ -144,8 +173,8 @@ bool ChessBoard::movePiece(int fromX, int fromY, int toX, int toY)
     {
         std::cout << "CHECK!\n";
     }
+
     currentTurn = opponent;
-    
     return true;
 }
 
@@ -166,11 +195,17 @@ Position ChessBoard::findKingPos(Color kingColor) const
     {
         for (int col = 0; col < 8; col++)
         {
-            if (board[row][col] &&
-                board[row][col]->getType() == PieceType::KING &&
-                board[row][col]->getColor() == kingColor)
+            if (board[row][col])
             {
-                return Position{row, col};
+                // std::cout << "Checking (" << row << "," << col << ") = "
+                //           << board[row][col]->getSymbol()
+                //           << " type=" << static_cast<int>(board[row][col]->getType())<<", "
+                //           ;
+                if (board[row][col]->getType() == PieceType::KING &&
+                    board[row][col]->getColor() == kingColor)
+                {
+                    return Position{row, col};
+                }
             }
         }
     }
@@ -206,16 +241,18 @@ bool ChessBoard::isKingInCheck(Color kingColor) const
 // Simulates move and checks for king exposure
 bool ChessBoard::doesMoveExposeKing(int fromX, int fromY, int toX, int toY, Color movingColor)
 {
-    // Simulate move
-    board[toX][toY] = std::move(board[fromX][fromY]);
+    auto movingPiece = std::move(board[fromX][fromY]);
+    auto capturedPiece = std::move(board[toX][toY]);
 
-    // Check king safety
-    bool isSafe = !isKingInCheck(movingColor);
+    board[toX][toY] = std::move(movingPiece);
 
-    // Undo simulation
+    bool result = isKingInCheck(movingColor);
+
+    // Restore original state
     board[fromX][fromY] = std::move(board[toX][toY]);
+    board[toX][toY] = std::move(capturedPiece);
 
-    return !isSafe;
+    return result;
 }
 
 // Complete move validation
@@ -227,19 +264,37 @@ bool ChessBoard::isMoveValid(int fromX, int fromY, int toX, int toY, Color curre
         return false;
     }
 
-    // 2. Check piece movement rules
+    // 2. Special castling case
+    if (board[fromX][fromY]->getType() == PieceType::KING &&
+        abs(fromY - toY) == 2 && fromX == toX &&
+        !board[fromX][fromY]->getHasMoved())
+    {
+        int rookY = (toY > fromY) ? 7 : 0; // Kingside or queenside
+        return isCastlingValid(fromX, fromY, fromX, rookY, currentTurn);
+    }
+
+    // 3. Check piece movement rules
     if (!board[fromX][fromY]->isValidMove(fromX, fromY, toX, toY, *this))
     {
         return false;
     }
 
-    // 3. Simulate move and check king safety
+    // 4. Verify path is clear (except for knights)
+    if (board[fromX][fromY]->getType() != PieceType::KNIGHT)
+    {
+        if (!isPathClear(fromX, fromY, toX, toY))
+        {
+            return false;
+        }
+    }
+
+    // 5. Simulate move and check king safety
     if (doesMoveExposeKing(fromX, fromY, toX, toY, currentTurn))
     {
         return false;
     }
 
-    // 4. Special case: If in check, verify the move actually resolves it
+    // 6. Special case: If in check, verify the move actually resolves it
     if (isKingInCheck(currentTurn))
     {
         // Simulate the move
@@ -262,7 +317,6 @@ bool ChessBoard::isMoveValid(int fromX, int fromY, int toX, int toY, Color curre
 
     return true;
 }
-
 // Checkmate detection
 bool ChessBoard::isCheckmate(Color color)
 {
@@ -291,16 +345,17 @@ bool ChessBoard::isCheckmate(Color color)
                     continue;
                 }
 
-                // Simulate move
-                auto captured = std::move(board[x][y]);
-                board[x][y] = std::move(board[kingPos.row][kingPos.col]);
-                bool inCheck = isKingInCheck(color);
+                auto movingPiece = std::move(board[kingPos.row][kingPos.col]);
+                auto capturedPiece = std::move(board[x][y]);
 
-                // Undo simulation
+                board[x][y] = std::move(movingPiece);
+
+                bool isStillInCheck = isKingInCheck(color);
+
                 board[kingPos.row][kingPos.col] = std::move(board[x][y]);
-                board[x][y] = std::move(captured);
+                board[x][y] = std::move(capturedPiece);
 
-                if (!inCheck)
+                if (!isStillInCheck)
                 {
                     return false; // King has escape
                 }
@@ -415,18 +470,167 @@ bool ChessBoard::hasAnyLegalMove(Color color)
     return false;
 }
 
-bool ChessBoard::isStalemate(Color color){
+bool ChessBoard::isStalemate(Color color)
+{
     // 1. King must NOT be in check
-    if (isKingInCheck(color)) {
+    if (isKingInCheck(color))
+    {
         return false;
     }
 
     // 2. No legal moves for any piece
-    if (hasAnyLegalMove(color)) {
+    if (hasAnyLegalMove(color))
+    {
         return false;
     }
 
     return true;
+}
+
+bool ChessBoard::isCastlingPathClear(int row, int fromCol, int toCol) const
+{
+    int step = (toCol > fromCol) ? 1 : -1;
+    for (int col = fromCol + step; col != toCol; col += step)
+    {
+        if (!isEmpty(row, col))
+            return false;
+    }
+    return true;
+}
+
+bool ChessBoard::isCastlingValid(int kingX, int kingY, int rookX, int rookY, Color color)
+{
+    // Verify same row and correct pieces
+    if (kingX != rookX)
+        return false;
+    if (!board[kingX][kingY] || board[kingX][kingY]->getType() != PieceType::KING)
+        return false;
+    if (!board[rookX][rookY] || board[rookX][rookY]->getType() != PieceType::ROOK)
+        return false;
+
+    // Verify neither has moved
+    if (board[kingX][kingY]->getHasMoved() || board[rookX][rookY]->getHasMoved())
+        return false;
+
+    // Check path between king and rook is clear
+    if (!isCastlingPathClear(kingX, kingY, rookY))
+        return false;
+
+    // Ensure king is not currently in check
+    if (isKingInCheck(color))
+        return false;
+
+    // Check that the king does not pass through or land in check
+    int direction = (rookY > kingY) ? 1 : -1;
+    for (int step = 1; step <= 2; ++step) {
+        int col = kingY + step * direction;
+        if (doesMoveExposeKing(kingX, kingY, kingX, col, color)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
+bool ChessBoard::isPathClear(int fromX, int fromY, int toX, int toY) const
+{
+    // Knights can jump over pieces - no path to check
+    if (board[fromX][fromY]->getType() == PieceType::KNIGHT)
+    {
+        return true;
+    }
+
+    int xStep = 0, yStep = 0;
+
+    // Determine direction of movement
+    if (toX != fromX)
+        xStep = (toX > fromX) ? 1 : -1;
+    if (toY != fromY)
+        yStep = (toY > fromY) ? 1 : -1;
+
+    int currentX = fromX + xStep;
+    int currentY = fromY + yStep;
+
+    // Check each square along the path
+    while (currentX != toX || currentY != toY)
+    {
+        if (!isEmpty(currentX, currentY))
+        {
+            return false; // Path is blocked
+        }
+        currentX += xStep;
+        currentY += yStep;
+    }
+
+    return true; // Path is clear
+}
+
+void ChessBoard::promotePawn(int x, int y)
+{
+    if (!board[x][y] || board[x][y]->getType() != PieceType::PAWN)
+    {
+        return; // Safety check
+    }
+
+    Color color = board[x][y]->getColor();
+    char choice;
+    bool validChoice = false;
+
+    // Clear any existing input errors
+    std::cin.clear();
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
+    std::cout << "\nPAWN PROMOTION for "
+              << (color == Color::White ? "White" : "Black") << "!\n";
+
+    while (!validChoice)
+    {
+        std::cout << "Choose promotion (Q=Queen, R=Rook, B=Bishop, N=Knight): ";
+        std::cin >> choice;
+        choice = toupper(choice);
+
+        switch (choice)
+        {
+        case 'Q':
+            board[x][y] = std::make_unique<Queen>(color);
+            validChoice = true;
+            break;
+        case 'R':
+            board[x][y] = std::make_unique<Rook>(color);
+            validChoice = true;
+            break;
+        case 'B':
+            board[x][y] = std::make_unique<Bishop>(color);
+            validChoice = true;
+            break;
+        case 'N':
+            board[x][y] = std::make_unique<Knight>(color);
+            validChoice = true;
+            break;
+        default:
+            std::cout << "Invalid choice! Please enter Q, R, B, or N.\n";
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            break;
+        }
+    }
+
+    std::cout << "Pawn promoted to " << board[x][y]->getSymbol() << "!\n";
+
+    // Clear any remaining input
+    std::cin.clear();
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+}
+
+bool ChessBoard::tryCastling(Color color, bool kingside)
+{
+    int row = (color == Color::White) ? 7 : 0;
+    int kingY = 4;                      // e-file
+    int rookY = kingside ? 7 : 0;       // h-file or a-file
+    int targetKingY = kingside ? 6 : 2; // g-file or c-file
+
+    return movePiece(row, kingY, row, targetKingY);
 }
 
 void ChessBoard::display() const

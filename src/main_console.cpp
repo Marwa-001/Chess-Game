@@ -23,97 +23,84 @@ bool parseInput(const string &input, int &x, int &y)
     return true;
 }
 
-int main()
-{
+int main() {
     ChessBoard board;
     string input;
     Color currentTurn = Color::White;
 
     cout << "==== Chess Console ====\n";
     cout << "Enter moves as [from][to] (e.g. 'e2e4')\n";
+    cout << "Castling: '0-0' (kingside) or '0-0-0' (queenside)\n";
     cout << "Type 'quit' to exit\n\n";
 
-    // Force immediate output
-    cout << "Initial board:" << endl;
-    board.display();
-    cout << flush; // Explicitly flush output
-    
-    // Check for game over before prompting for move
-    if (board.isGameOver()) {
-        cout << "CHECKMATE! " 
-             << (currentTurn == Color::White ? "Black" : "White")
-             << " wins!\n";
-    }
-
-    while (true)
-    {
+    while (true) {
         board.display();
-    
-    // Check for stalemate first
-    if (board.isStalemate(currentTurn)) {
-        std::cout << "\nSTALEMATE! Game ends in a draw.\n";
-        break;
-    }
-    
-        // Check for checkmate first
+        
+        // Check game state first
+        if (board.isGameOver()) {
+            cout << "Game over!\n";
+            break;
+        }
+        if (board.isStalemate(currentTurn)) {
+            cout << "\nSTALEMATE! Game ends in a draw.\n";
+            break;
+        }
         if (board.isCheckmate(currentTurn)) {
             cout << "\nCHECKMATE! " 
                  << (currentTurn == Color::White ? "Black" : "White") 
                  << " wins!\n";
-            break;  // Exit the game loop immediately
+            break;
         }
-        
-        // Display check warning
         if (board.isKingInCheck(currentTurn)) {
             cout << "CHECK! You must protect your king!\n";
         }
-    
+
         cout << (currentTurn == Color::White ? "White" : "Black") << "'s move: ";
+        getline(cin, input);
 
-        // Robust input handling
-        if (!getline(cin, input))
-        {
-            cerr << "Input error!\n";
-            break;
-        }
+        if (input == "quit") break;
 
-        if (input == "quit")
-            break;
-
-        if (input.empty())
-        {
-            cout << "Empty input! Try 'e2e4' or 'quit'\n";
+        // Handle castling notation first
+        if (input == "0-0" || input == "0-0-0") {
+            bool kingside = (input == "0-0");
+            if (board.tryCastling(currentTurn, kingside)) {
+                currentTurn = (currentTurn == Color::White) ? Color::Black : Color::White;
+            } else {
+                cout << "Castling not allowed!\n";
+            }
             continue;
         }
 
+        // Handle standard coordinate moves
         int fromX, fromY, toX, toY;
         if (input.length() != 4 ||
             !parseInput(input.substr(0, 2), fromX, fromY) ||
-            !parseInput(input.substr(2, 2), toX, toY))
-        {
-            cout << "Invalid format! Use like 'a2a4'\n";
+            !parseInput(input.substr(2, 2), toX, toY)) {
+            cout << "Invalid format! Use like 'a2a4' or '0-0' for castling\n";
             continue;
         }
 
-        Pieces *piece = board.getPiece(fromX, fromY);
-        if (!piece)
-        {
-            cout << "No piece at " << input.substr(0, 2) << "!\n";
-            continue;
-        }
-
-        if (board.movePiece(fromX, fromY, toX, toY)) {
-            currentTurn = (currentTurn == Color::White) ? Color::Black : Color::White;
-        } else {
-            cout << "Invalid move! ";
-            if (board.isKingInCheck(currentTurn)) {
-                cout << "Your king is still in check!\n";
+        // Handle promotion moves
+        Pieces* movingPiece = board.getPiece(fromX, fromY);
+        if (movingPiece && movingPiece->getType() == PieceType::PAWN && 
+            (toX == 0 || toX == 7)) {
+            if (board.movePiece(fromX, fromY, toX, toY)) {
+                if (board.getPiece(toX, toY)->getType() != PieceType::PAWN) {
+                    currentTurn = (currentTurn == Color::White) ? Color::Black : Color::White;
+                }
+            }
+        } 
+        else {
+            // Normal move
+            if (board.movePiece(fromX, fromY, toX, toY)) {
+                currentTurn = (currentTurn == Color::White) ? Color::Black : Color::White;
+            } else {
+                cout << "Invalid move!\n";
             }
         }
 
-        if (board.isGameOver()) {
-            break;
-        }
+        // Clear any leftover input
+        cin.clear();
     }
 
     cout << "Game ended.\n";

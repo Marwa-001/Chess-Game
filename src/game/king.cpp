@@ -10,11 +10,16 @@ bool King::isValidMove(int fromX, int fromY, int toX, int toY, const ChessBoard&
     // 1. Standard king movement (1 square any direction)
     if (dx <= 1 && dy <= 1) {
         // Destination must be empty or enemy
-        return board.isEmpty(toX, toY) || 
+        return board.isEmpty(toX, toY) ||
                board.getPiece(toX, toY)->getColor() != color;
     }
 
     // 2. Castling (handled separately in ChessBoard)
+    // Add castling check
+    int colDiff = abs(toY - fromY);
+    if (colDiff == 2 && fromX == toX && !hasMoved) {
+        return true;
+    }
     return false; // Castling validation happens in ChessBoard::movePiece()
 }
 

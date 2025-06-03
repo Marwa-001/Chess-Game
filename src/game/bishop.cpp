@@ -23,7 +23,7 @@ bool Bishop::isValidMove(int fromX, int fromY, int toX, int toY, const ChessBoar
     }
     
     // 3. Validate destination
-    return board.isEmpty(toX, toY) || 
+    return board.isEmpty(toX, toY) ||
            board.getPiece(toX, toY)->getColor() != color;
 }
 

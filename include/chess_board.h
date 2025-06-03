@@ -14,6 +14,10 @@ private:
     bool gameOver = false;
     bool checkmate=false;
     Color currentTurn;
+    bool isCastlingPathClear(int row, int fromCol, int toCol) const;
+    bool isCastlingValid(int kingX, int kingY, int rookX, int rookY, Color color);
+    bool isPathClear(int fromX, int fromY, int toX, int toY) const;
+    void promotePawn(int x, int y);
 public:
     ChessBoard();
     bool isGameOver() const { return gameOver; }
@@ -32,4 +36,5 @@ public:
     bool hasAnyLegalMove(Color color);
     bool isCheckmate(Color color);
     bool isStalemate(Color color);
+    bool tryCastling(Color color, bool kingside);
 };

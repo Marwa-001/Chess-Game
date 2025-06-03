@@ -8,6 +8,6 @@ public:
     char getSymbol() const override;
     
     // Special for castling
-    bool hasMoved = false; // Track if rook moved (for castling)  --> TODO: CATSLING
+    bool hasMoved = false; // Track if rook moved (for castling)
     PieceType getType() const override { return PieceType::ROOK; }
 };

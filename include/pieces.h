@@ -8,6 +8,7 @@ enum class PieceType {
 class Pieces {
 protected:
     Color color;
+    bool hasMoved=false;
 public:
     Pieces(Color c) : color(c) {}
     virtual ~Pieces() = default;
@@ -15,4 +16,6 @@ public:
     virtual char getSymbol() const = 0;
     Color getColor() const { return color; }
     virtual PieceType getType() const = 0;
+    bool getHasMoved() const { return hasMoved; }
+    void setHasMoved(bool moved) { hasMoved = moved; }
 };
