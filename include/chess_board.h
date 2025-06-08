@@ -37,4 +37,7 @@ public:
     bool isCheckmate(Color color);
     bool isStalemate(Color color);
     bool tryCastling(Color color, bool kingside);
+
+    int enPassantTargetRow = -1;
+int enPassantTargetCol = -1;
 };
