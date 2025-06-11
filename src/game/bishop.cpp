@@ -1,5 +1,5 @@
-#include "bishop.h"
-#include "chess_board.h"
+#include "../../include/bishop.h"
+#include "../../include/chess_board.h"
 
 Bishop::Bishop(Color c) : Pieces(c) {}
 
